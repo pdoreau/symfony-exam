@@ -30,20 +30,32 @@ class VisitFiles
      *
      * Return a list of every files filtered by given function.
      *
-     * @param TODO $root
-     * @param TODO $filterFn
+     * @param Directory $root
+     * @param callable $filterFn
      *
-     * @return TODO
+     * @return array
      */
-    public function visitFiles($root, callable $filterFn): void
+    public function visitFiles(Directory $root, callable $filterFn): array
     {
-        // @TODO
+        $result = [];
+
+        foreach ($root->children as $child)
+        {
+            if ($child instanceof File && $filterFn($child)) {
+                $result[] = $child;
+            }
+            if ($child instanceof Directory) {
+                $result = [...$result, ...$this->visitFiles($child, $filterFn)];
+            }
+        }
+
+        return $result;
     }
 
-    public function usageExemple(): void
+    public function usageExemple(Directory $root): array
     {
-        $this->visitFiles(
-            null, // @TODO use a concrete root exemple
+        return $this->visitFiles(
+            $root,
             function ($file) {
                 $name = $file->name;
                 for ($i = 0; $i < floor(strlen($name)); $i++) {
