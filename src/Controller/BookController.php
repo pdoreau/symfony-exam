@@ -2,51 +2,80 @@
 
 namespace App\Controller;
 
+use App\Entity\Book;
+use App\Repository\BookRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Nelmio\ApiDocBundle\Annotation\Model;
+use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Serializer\Context\Normalizer\ObjectNormalizerContextBuilder;
+use Symfony\Component\Serializer\Serializer;
+use Symfony\Component\Serializer\SerializerInterface;
 
 class BookController extends AbstractController
 {
+    private EntityManagerInterface $em;
+    private BookRepository $bookRepository;
+    private SerializerInterface $serializer;
+
     /**
-     * return all namme of books in json format
-     *
+     * @param EntityManagerInterface $em
+     * @param BookRepository         $bookRepository
+     * @param Serializer             $serializer
      */
-    #[Route('/books/list', name: 'list-of-my-books', methods: ['POST'], format: 'json')]
-    public function book()
+    public function __construct(EntityManagerInterface $em, BookRepository $bookRepository, SerializerInterface $serializer)
     {
-        $book = $this->container->get('doctrine.orm.default_entity_manager')->getRepository("App\Entity\Book")->findBy(['id' => 1]);
-
-        $template = $this->container->get('twig')->load('book/index.html.twig');
-
-        return $template->render([
-            'return' => json_encode([
-                'data' => json_encode($book[0]['name'])
-            ]),
-        ]);
+        $this->em = $em;
+        $this->bookRepository = $bookRepository;
+        $this->serializer = $serializer;
     }
 
-    /**
-     * parcour all books and add sufix on name
-     */
-    #[Route('/books/add-sufix', name: 'add-sufix-on-my-books', methods: ['GET'], format: 'json')]
-    public function addSufix(string $suffix)
+    #[Route('/books', methods: ['GET'], format: 'json')]
+    #[OA\Response(
+        response: 200,
+        description: 'Return the list of books',
+        content: new OA\JsonContent(
+            type: 'array',
+            items: new OA\Items(ref: new Model(type: Book::class, groups: ['book-list']))
+        )
+    )]
+    public function books()
     {
-        $books = $this->container->get('doctrine.orm.default_entity_manager')->getRepository("App\Entity\Book")->findBy([]);
+        return JsonResponse::fromJsonString($this->serializer->serialize(
+            $this->bookRepository->findAll(),
+            'json',
+            (new ObjectNormalizerContextBuilder())->withGroups('book-list')->toArray())
+        );
+    }
 
+    #[Route('/books/add-suffix', methods: ['POST'], format: 'json')]
+    #[OA\RequestBody(content: new OA\JsonContent(properties: [new OA\Property(property: 'suffix', type: 'string')]))]
+    #[OA\Response(
+        response: 200,
+        description: 'Iterate over all books and add suffix on titles',
+        content: new OA\JsonContent(
+            type: 'array',
+            items: new OA\Items(ref: new Model(type: Book::class, groups: ['book-list']))
+        )
+    )]
+    public function addSuffix(Request $request)
+    {
+        $books = $this->bookRepository->findAll();
         foreach ($books as $book) {
-            $book->name .= ' - Sufix';
-            $this->container->get('doctrine.orm.default_entity_manager')->persist($book);
-            $this->container->get('doctrine.orm.default_entity_manager')->flush();
+            $book->setTitle(
+                $book->getTitle().' - '.json_decode($request->getContent(), true)['suffix']
+            );
         }
 
+        $this->em->flush();
 
-        $template = $this->container->get('twig')->load('book/index.html.twig');
-
-        return $template->render([
-            'return' => json_encode([
-                'data' => json_encode('ok'),
-                'books' => json_encode($books)
-            ]),
-        ]);
+        return JsonResponse::fromJsonString($this->serializer->serialize(
+            $books,
+            'json',
+            (new ObjectNormalizerContextBuilder())->withGroups('book-list')->toArray())
+        );
     }
 }

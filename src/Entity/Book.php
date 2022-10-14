@@ -20,7 +20,7 @@ class Book
 
     #[ORM\Column(length: 255)]
     #[GQL\Field]
-    #[Groups('author-list')]
+    #[Groups(['book-list', 'author-list'])]
     private ?string $title = null;
 
     #[ORM\Column(type: Types::TEXT)]
