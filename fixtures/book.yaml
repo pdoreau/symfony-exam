@@ -1,4 +1,15 @@
 App\Entity\Book:
+
   book_{1..10}:
     title: <sentence()>
     resume: <paragraph()>
+
+  books_author1_{1..10}:
+    title: <sentence()>
+    resume: <paragraph()>
+    author: '@author1'
+
+  books_author2_{1..10}:
+    title: <sentence()>
+    resume: <paragraph()>
+    author: '@author2'

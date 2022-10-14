@@ -1,0 +1,8 @@
+App\Entity\Author:
+  author1:
+    firstName: 'Pascal'
+    lastName: 'SuperAuthor'
+
+  author2:
+    firstName: 'John'
+    lastName: 'GenialAuthor'
